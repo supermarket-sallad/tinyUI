@@ -2,6 +2,10 @@
 from TDStoreTools import StorageManager
 import TDFunctions as TDF
 
+##TODO##
+'''
+-bind CHOP mapped to minMax 
+'''
 # ── Element type constants ───────────────────────────────────────────────────
 T_SLIDER        = "slider"
 T_BUTTON        = "button"
@@ -175,8 +179,12 @@ class TDTinyUIExt:
 		self.rowMap      = None
 		self.armedForMidi = None
 
-		self.LAYOUT = paramsLayout
-
+		##LAYOUT
+		storedItems = [
+			{'name': 'LAYOUT', 'default': paramsLayout, 'readOnly': False,
+			'property': True, 'dependable': True},
+		]
+		self.stored = StorageManager(self, ownerComp, storedItems)
 
 		TDF.createProperty(self, "SelectedRow", value=0,   dependable=True, readOnly=False)
 		TDF.createProperty(self, "HoverRow",    value=0,   dependable=True, readOnly=False)
@@ -450,12 +458,16 @@ class TDTinyUIExt:
 	def MidiMap(self, remove=False):
 		if not hasattr(op, "tinyUI_midiMapper"): return
 		if not op.tinyUI_midiMapper.par.Midimap: return
-		
-
+	
 		info = self.GetRowInfo(self.SelectedRow)
 		if info is None:
 			return
 		t, name, par_name, option_index = info
+	
+		item = next((i for i in self.LAYOUT if i.get("name") == name), None)
+		if item is None or not self._isInteractable(item):
+			return
+	
 		target_par = (
 			f"{par_name}dummy{option_index}"
 			if (t == T_RADIO and option_index is not None)
@@ -466,9 +478,8 @@ class TDTinyUIExt:
 			self.ownerComp.par[target_par].bindExpr = ""
 			return
 		self.armedForMidi = target_par
-
-		op.tinyUI_midiMapper.IncomingPar = target_par
-		print(op.tinyUI_midiMapper.IncomingPar)
+	
+		op.tinyUI_midiMapper.IncomingPar = self.ownerComp.par[target_par]
 		return
 
 	def WhenMidiChanges(self, midi_chan):
